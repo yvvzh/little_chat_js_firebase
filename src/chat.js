@@ -1,7 +1,9 @@
 import { ref, set, push, child, onChildAdded } from "firebase/database";
 import { db } from "./firebase";
 
-const userName = prompt("Enter your name");
+const userInput = prompt("Enter your name");
+const trimmedInput = userInput?.trim();
+const userName = trimmedInput && trimmedInput !== "" ? trimmedInput : "Anonyme";
 
 const pseudoDisplay = document.getElementById("pseudo-display");
 
@@ -12,6 +14,8 @@ const message = document.getElementById("message");
 const submit = document.getElementById("submit");
 
 const newMsg = ref(db, "messages/");
+
+let messageTimestamps = [];
 
 pseudoDisplay.textContent = userName;
 
@@ -34,43 +38,59 @@ document.addEventListener("keyup", (e) => {
 
 function displayMessages(data) {
     if (data.val().name === userName) {
-        let sender = document.createElement("span");
-        sender.textContent = `${data.val().name} - ${data.val().time}`;
-        sender.classList.add("sender");
-        let content = document.createElement("p");
-        content.textContent = data.val().message;
-        let div = document.createElement("div");
-        div.classList.add("user-msg");
-        div.appendChild(content);
-        div.appendChild(sender);
-        chatArea.appendChild(div);
+        generateMessage(data, "user-msg");
     } else {
-        let sender = document.createElement("span");
-        sender.textContent = `${data.val().name} - ${data.val().time}`;
-        sender.classList.add("sender");
-        let content = document.createElement("p");
-        content.textContent = data.val().message;
-        let div = document.createElement("div");
-        div.classList.add("buddy-msg");
-        div.appendChild(content);
-        div.appendChild(sender);
-        chatArea.appendChild(div);
+        generateMessage(data, "buddy-msg");
     }
 }
 
+function generateMessage(data, author) {
+    let sender = document.createElement("span");
+    sender.textContent = `${data.val().name} - ${data.val().time}`;
+    sender.classList.add("sender");
+    let content = document.createElement("p");
+    content.textContent = data.val().message;
+    let div = document.createElement("div");
+    div.classList.add(author);
+    div.appendChild(content);
+    div.appendChild(sender);
+    chatArea.appendChild(div);
+}
+
 function sendMessage() {
-    const id = push(child(ref(db), "messages")).key;
-    const formatedTime = getTime();
+    if (spamCheck()) {
+        const id = push(child(ref(db), "messages")).key;
+        const formatedTime = getTime();
+        set(ref(db, "messages/" + id), {
+            name: userName,
+            message: message.value,
+            time: formatedTime,
+        });
 
-    set(ref(db, "messages/" + id), {
-        name: userName,
-        message: message.value,
-        time: formatedTime,
-    });
+        message.value = "";
 
-    message.value = "";
+        // console.log("message sent");
+    }
+}
 
-    console.log("message sent");
+function spamCheck() {
+    const currentTime = Date.now();
+    const messageLimitInterval = 3000; // 3 seconds
+    const messageLimitCount = 3; // 3 messages
+
+    // Removes timestamps older than 3 seconds
+    messageTimestamps = messageTimestamps.filter((timestamp) => currentTime - timestamp < messageLimitInterval);
+
+    // Check if the user has sent more than 3 messages within the last 3 seconds
+    if (messageTimestamps.length >= messageLimitCount) {
+        // console.log("You are sending messages too quickly. Please wait a moment before sending another message.");
+        alert("Vous envoyez vos messages trop vite saltimbanque!  Ralentissez!!!");
+        return false;
+    }
+
+    // Add the current timestamp to the array
+    messageTimestamps.push(currentTime);
+    return true;
 }
 
 function getTime() {
