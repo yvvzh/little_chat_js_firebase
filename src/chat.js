@@ -35,7 +35,7 @@ document.addEventListener("keyup", (e) => {
 function displayMessages(data) {
     if (data.val().name === userName) {
         let sender = document.createElement("span");
-        sender.textContent = data.val().name;
+        sender.textContent = `${data.val().name} - ${data.val().time}`;
         sender.classList.add("sender");
         let content = document.createElement("p");
         content.textContent = data.val().message;
@@ -46,7 +46,7 @@ function displayMessages(data) {
         chatArea.appendChild(div);
     } else {
         let sender = document.createElement("span");
-        sender.textContent = data.val().name;
+        sender.textContent = `${data.val().name} - ${data.val().time}`;
         sender.classList.add("sender");
         let content = document.createElement("p");
         content.textContent = data.val().message;
@@ -60,15 +60,46 @@ function displayMessages(data) {
 
 function sendMessage() {
     const id = push(child(ref(db), "messages")).key;
+    const formatedTime = getTime();
 
     set(ref(db, "messages/" + id), {
         name: userName,
         message: message.value,
+        time: formatedTime,
     });
 
     message.value = "";
 
     console.log("message sent");
+}
+
+function getTime() {
+    const time = new Date();
+    const hour = formatTimeValue(time.getHours(), "hour");
+    const minutes = formatTimeValue(time.getMinutes(), "minutes");
+    const date = formatTimeValue(time.getDate(), "date");
+    const month = formatTimeValue(time.getMonth() + 1, "month");
+    const year = time.getFullYear();
+
+    const formatedTime = `${hour}h${minutes} - ${date}/${month}/${year}`;
+
+    return formatedTime;
+}
+
+function formatTimeValue(value, debug) {
+    let result;
+    switch (true) {
+        case value >= 0 && value <= 9:
+            result = `0${value}`;
+            break;
+        case value >= 10:
+            result = value;
+            break;
+        default:
+            result = "??";
+            console.log(`Failed to set ${debug}`);
+    }
+    return result;
 }
 
 function scrollToBottom() {
